@@ -1,77 +1,100 @@
-// services.js - No encryption, just file storage
 const fs = require('fs')
 const path = require('path')
+const { Tusky } = require('@tusky-io/ts-sdk')
 
-// In-memory storage for document metadata
+const tusky = new Tusky({
+  apiKey: process.env.TUSKY_API_KEY,
+  network: process.env.WALRUS_NETWORK || 'testnet'
+})
+
 const documents = new Map()
 
 
 async function encryptAndUpload(file, walletAddresses) {
-// 1. Generate unique shareId
-  const shareId = Math.random().toString(36).slice(2, 11)
-  // 2. Move file to permanent location
-  const fileName = `${shareId}_${file.originalname}`
-  const filePath = path.join('uploads', fileName)
-  fs.renameSync(file.path, filePath)
+  try {
+    const { id: vaultId } = await tusky.vault.create(`doc-share-${Date.now()}`, { encrypted: false })
 
-  // 3. Store metadata
-  documents.set(shareId, {
-    filePath,
-    originalName: file.originalname,
-    allowedWallets: walletAddresses,
-    accessedBy: [],
-    createdAt: Date.now()
-  })
+    const uploadId = await tusky.file.upload(vaultId, file.path, {
+      name: file.originalname
+    })
 
-  // 4. Set cleanup timer (2 minutes)
-  setTimeout(() => cleanupDocument(shareId), 120000)
-  return shareId
+    const shareId = uploadId
+
+    documents.set(shareId, {
+      vaultId,
+      uploadId,
+      originalName: file.originalname,
+      allowedWallets: walletAddresses,
+      accessedBy: [],
+      createdAt: Date.now()
+    })
+
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path)
+    }
+
+    const timeoutMs = parseInt(process.env.AUTO_DELETE_TIMEOUT) || 120000
+    setTimeout(() => cleanupDocument(shareId), timeoutMs)
+
+    return shareId
+
+  } catch (error) {
+    throw new Error(`Failed to upload to Walrus: ${error.message}`)
+  }
 }
 
 async function downloadAndDecrypt(shareId, walletAddress) {
+  try {
     const doc = documents.get(shareId)
     if (!doc) throw new Error('Document not found')
 
-    // Check access
     if (!doc.allowedWallets.includes(walletAddress)) {
       throw new Error('Access denied')
     }
 
-    // Mark as accessed
-    doc.accessedBy.push(walletAddress)
+    if (!doc.accessedBy.includes(walletAddress)) {
+      doc.accessedBy.push(walletAddress)
+    }
 
-    // Read file
-    const fileBuffer = fs.readFileSync(doc.filePath)
+    const fileBuffer = await tusky.file.arrayBuffer(shareId)
 
-    // Check if all users accessed - cleanup
     if (doc.accessedBy.length === doc.allowedWallets.length) {
-      cleanupDocument(shareId)
+      setTimeout(() => cleanupDocument(shareId), 1000)
     }
 
     return {
-      data: fileBuffer,
+      data: Buffer.from(fileBuffer),
       fileName: doc.originalName
     }
+
+  } catch (error) {
+    throw new Error(`Failed to download document: ${error.message}`)
   }
+}
 
 async function verifyAccess(shareId, walletAddress) {
   const doc = documents.get(shareId)
-    if (!doc) return false
-    if (!doc.allowedWallets.includes(walletAddress)) return false
-    if (doc.accessedBy.includes(walletAddress)) return false
-    return true
+  if (!doc) return false
+  if (!doc.allowedWallets.includes(walletAddress)) return false
+  if (doc.accessedBy.includes(walletAddress)) return false
+  return true
 }
 
-function cleanupDocument(shareId) {
-  const doc = documents.get(shareId)
-    if (doc) {
-      // Delete physical file
-      if (fs.existsSync(doc.filePath)) {
-        fs.unlinkSync(doc.filePath)
-      }
-      // Remove from memory
-      documents.delete(shareId)
+async function cleanupDocument(shareId) {
+  try {
+    const doc = documents.get(shareId)
+    if (!doc) return
+
+    try {
+      await tusky.vault.delete(doc.vaultId)
+    } catch (error) {
+      // vault deletion failed, continue cleanup
     }
+
+    documents.delete(shareId)
+  } catch (error) {
+    // cleanup failed silently
+  }
 }
 
 module.exports = { encryptAndUpload, downloadAndDecrypt, verifyAccess }

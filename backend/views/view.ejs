@@ -1,21 +1,42 @@
 
 
 <div id="viewer">
-  <h2>Access Document</h2>
-  <p>Share ID: <%= shareId %></p>
+  <h2><i data-feather="lock"></i> Access Document</h2>
+  <div style="text-align: center; margin-bottom: 2rem; opacity: 0.7;">
+    <code style="background: rgba(18, 20, 26, 0.5); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem;">
+      <i data-feather="hash" style="width: 14px; height: 14px; margin-right: 4px;"></i>
+      <%= shareId.slice(0, 12) %>...
+    </code>
+  </div>
 
   <div id="wallet-section">
-    <button onclick="connectViewerWallet()">Connect Wallet to Access</button>
+    <button id="connect-viewer-btn" onclick="connectViewerWallet()">
+      <i data-feather="link"></i>
+      <span>Connect Wallet to Access</span>
+    </button>
     <span id="viewer-wallet" style="display:none"></span>
   </div>
 
-  <div id="document-viewer" style="display:none">
-    <h3>✅ Document Access Granted!</h3>
-      <p id="filename"></p>
-      <button id="download-btn" onclick="downloadFile()">Download File</button>
+  <div id="loading-wallet" style="display:none" class="loading-state">
+    <i data-feather="loader" class="spin"></i>
+    <span>Connecting wallet...</span>
   </div>
 
-  <div id="error-message" style="display:none; color: red;">
+  <div id="loading-access" style="display:none" class="loading-state">
+    <i data-feather="loader" class="spin"></i>
+    <span>Verifying access...</span>
+  </div>
+
+  <div id="document-viewer" style="display:none">
+    <h3><i data-feather="check-circle"></i> Document Access Granted!</h3>
+    <p id="filename" style="margin: 1rem 0; font-weight: 500;"></p>
+    <button id="download-btn" onclick="downloadFile()">
+      <i data-feather="download"></i>
+      <span>Download File</span>
+    </button>
+  </div>
+
+  <div id="error-message" style="display:none;" class="error">
     <!-- Error messages -->
   </div>
 </div>
@@ -25,39 +46,85 @@
   let viewerWallet = null
 
   async function connectViewerWallet() {
-    viewerWallet = await connectWallet()
+    const connectBtn = document.getElementById('connect-viewer-btn')
+    const loadingWallet = document.getElementById('loading-wallet')
+
+    // Show loading state
+    connectBtn.style.display = 'none'
+    loadingWallet.style.display = 'block'
+
+    try {
+      viewerWallet = await connectWallet()
+
+      // Hide wallet loading
+      loadingWallet.style.display = 'none'
+
+      // Show wallet info
       document.getElementById('viewer-wallet').textContent = viewerWallet
       document.getElementById('viewer-wallet').style.display = 'inline'
 
-      // Try to access document immediately
+      // Update button to show connected state
+      connectBtn.innerHTML = '<i data-feather="check"></i><span>Wallet Connected</span>'
+      connectBtn.style.display = 'inline-block'
+      connectBtn.disabled = true
+      connectBtn.style.opacity = '0.7'
+
+      feather.replace()
+
+      // Start access verification
       accessDocument()
+    } catch (error) {
+      loadingWallet.style.display = 'none'
+      connectBtn.style.display = 'inline-block'
+
+      document.getElementById('error-message').textContent = 'Failed to connect wallet: ' + error.message
+      document.getElementById('error-message').style.display = 'block'
+    }
   }
 
   async function accessDocument() {
+    const loadingAccess = document.getElementById('loading-access')
+    const errorMessage = document.getElementById('error-message')
+
+    // Show access verification loading
+    loadingAccess.style.display = 'block'
+    errorMessage.style.display = 'none'
+
     try {
-        const response = await fetch('/access', {
-          method: 'POST',
-          headers: { 'Content-Type':'application/json' },
-          body: JSON.stringify({ shareId, walletAddress: viewerWallet })
-        })
+      const response = await fetch('/access', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ shareId, walletAddress: viewerWallet })
+      })
 
-        const result = await response.json()
+      const result = await response.json()
 
-        if (result.success) {
+      // Hide loading state
+      loadingAccess.style.display = 'none'
 
-  document.getElementById('filename').textContent = `File: ${result.fileName}`
-          document.getElementById('document-viewer').style.display = 'block'
-        } else {
-          document.getElementById('error-message').textContent = result.error
-          document.getElementById('error-message').style.display = 'block'
-        }
-      } catch (error) {
-        document.getElementById('error-message').textContent = 'Access failed: ' + error.message
-        document.getElementById('error-message').style.display = 'block'
+      if (result.success) {
+        document.getElementById('filename').textContent = `File: ${result.fileName}`
+        document.getElementById('document-viewer').style.display = 'block'
+        feather.replace()
+      } else {
+        errorMessage.innerHTML = '<i data-feather="alert-circle"></i> ' + result.error
+        errorMessage.style.display = 'block'
+        feather.replace()
       }
+    } catch (error) {
+      loadingAccess.style.display = 'none'
+      errorMessage.innerHTML = '<i data-feather="alert-circle"></i> Access failed: ' + error.message
+      errorMessage.style.display = 'block'
+      feather.replace()
+    }
   }
 
   function downloadFile() {
-      window.open(`/download/${shareId}?wallet=${viewerWallet}`, '_blank')
-    }
+    window.open(`/download/${shareId}?wallet=${viewerWallet}`, '_blank')
+  }
+
+  // Initialize icons when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    feather.replace()
+  })
 </script>

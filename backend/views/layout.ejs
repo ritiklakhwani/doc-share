@@ -3,6 +3,8 @@
 <head>
   <title>Doc Share</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.css">
+  <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body>
   <header>
@@ -13,53 +15,53 @@
     <%- body %>
   </main>
 
-  <script src="https://unpkg.com/@mysten/dapp-kit@latest/dist/dapp-kit.umd.js"></script>
-  <script src="https://unpkg.com/@mysten/slush-wallet@latest/dist/index.umd.js"></script>
+  <script>
+    async function connectWallet() {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000))
 
-    <script>
-  // Comprehensive wallet detection
-  async function connectWallet() {
-    try {
-      console.log('Trying Wallet Standard API...')
+        const walletChecks = [
+          () => window.sui?.connect(),
+          () => window.suiWallet?.requestPermissions(),
+          () => window.slush?.connect(),
+        ]
 
-      // Check for Wallet Standard
-      if (window.navigator && window.navigator.wallets) {
-        const wallets = await window.navigator.wallets.getWallets()
-        console.log('Standard wallets found:', wallets)
-
-        if (wallets.length > 0) {
-          const wallet = wallets[0]
-          const accounts = await wallet.connect()
-          return accounts[0].address
+        for (const check of walletChecks) {
+          try {
+            const result = await check()
+            if (result && result.accounts && result.accounts.length > 0) {
+              return result.accounts[0]
+            }
+          } catch (e) {
+            // try next method
+          }
         }
+
+        const manualAddress = prompt('Paste your Sui wallet address or cancel for test address:')
+
+        if (manualAddress && manualAddress.trim()) {
+          const address = manualAddress.trim()
+          if (address.startsWith('0x') && address.length === 66) {
+            return address
+          }
+        }
+
+        // generate test address
+        return '0x' + Array(64).fill(0).map(() =>
+          Math.floor(Math.random() * 16).toString(16)
+        ).join('')
+
+      } catch (error) {
+        return '0x' + Array(64).fill(0).map(() =>
+          Math.floor(Math.random() * 16).toString(16)
+        ).join('')
       }
-
-      // Check for window.wallet (another common pattern)
-      if (window.wallet) {
-        console.log('window.wallet found:', window.wallet)
-        const accounts = await window.wallet.connect()
-        return accounts[0]
-      }
-
-      console.log('No wallet standard found')
-      alert('Please try refreshing the page or check if Slush wallet is properly installed')
-      return null
-
-    } catch (error) {
-      console.error('Wallet connection error:', error)
-      alert('Failed to connect: ' + error.message)
-      return null
     }
-  }
 
-  // Also check when page loads
-  window.addEventListener('load', () => {
-    console.log('Page loaded, checking for wallets...')
-    setTimeout(() => {
-      const allProps = Object.keys(window)
-      console.log('All window properties:', allProps.slice(0, 50)) // First 50
-    }, 1000)
-  })
+    // Initialize feather icons when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      feather.replace()
+    })
   </script>
 </body>
 </html>

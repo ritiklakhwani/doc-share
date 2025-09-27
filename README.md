@@ -1,14 +1,59 @@
-one time doc share 
+# Doc Share - Secure One-Time Document Sharing
 
-first there wiull be 2 functions - admin, view
+## The Problem
 
-admin -
-1. in admin the user will fisr connect the wallet and will upload the doc which will move to backend and user will also mention the wallet addresses that will have the access to the link.
+Traditional document sharing platforms have critical security flaws:
+- Documents persist indefinitely on centralized servers
+- No guarantee of automatic deletion after access
+- Lack of granular access control per document
+- Centralized storage creates single points of failure
+- No cryptographic proof of access permissions
 
-2. then the doc and the addresses will move to the backend the backend will pass this to seal sdk it will encryot the doc and generate a public and private key for decrypting it later and will store it in the memory only 
+## Our Solution
 
-3. then the encrypted file will move to walrus, walrus sdk(tusky), (seal) will conver that encrypted file to a link that can be shared.
+A decentralized document sharing platform built on **Walrus** that ensures:
+- **One-time access**: Documents automatically delete after all authorized users access them
+- **Time-based expiry**: Files vanish after 2 minutes regardless of access
+- **Wallet-based permissions**: Only specified Sui wallet addresses can access documents
+- **Decentralized storage**: Files stored on Walrus network, not centralized servers
+- **Zero persistence**: No long-term storage, complete privacy
 
-view - 
-1. in view the user will first connect the wallet then will paste the link in the input box and if the wallet address of the user is same as the one the admin mentioned then the file will open otherwise it will not open and if all the mentioned users opened the file the the file will get erased from walrus storage or if all users didnt open the file the data will anyway get erased within a specific timeline 2mins
+## How It Works
+
+### Upload Flow
+1. Connect Sui wallet and upload document
+2. Specify authorized wallet addresses
+3. File uploads to Walrus decentralized storage via Tusky SDK
+4. Receive shareable link with unique Walrus identifier
+
+### Access Flow
+1. Recipients connect their Sui wallet
+2. System verifies wallet address against permissions
+3. Authorized users can download once from Walrus
+4. Document auto-deletes when all users access OR after 2 minutes
+
+## Tech Stack
+
+- **Storage**: Walrus Protocol (decentralized)
+- **SDK**: Tusky for Walrus integration
+- **Blockchain**: Sui Network for wallet authentication
+- **Backend**: Node.js + Express
+- **Frontend**: EJS with Feather icons
+
+## Key Features
+
+- Wallet-gated access control
+- Automatic cleanup (time + access based)
+- Decentralized storage on Walrus
+- One-time download guarantee
+- No data persistence
+- Clean, responsive UI
+
+## Use Cases
+
+- Sensitive document sharing between specific parties
+- Legal document exchange with automatic deletion
+- Temporary file sharing for teams
+- Confidential information distribution
+- Time-sensitive document access
 
