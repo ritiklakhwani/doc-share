@@ -1,0 +1,63 @@
+
+
+<div id="viewer">
+  <h2>Access Document</h2>
+  <p>Share ID: <%= shareId %></p>
+
+  <div id="wallet-section">
+    <button onclick="connectViewerWallet()">Connect Wallet to Access</button>
+    <span id="viewer-wallet" style="display:none"></span>
+  </div>
+
+  <div id="document-viewer" style="display:none">
+    <h3>✅ Document Access Granted!</h3>
+      <p id="filename"></p>
+      <button id="download-btn" onclick="downloadFile()">Download File</button>
+  </div>
+
+  <div id="error-message" style="display:none; color: red;">
+    <!-- Error messages -->
+  </div>
+</div>
+
+<script>
+  const shareId = '<%= shareId %>'
+  let viewerWallet = null
+
+  async function connectViewerWallet() {
+    viewerWallet = await connectWallet()
+      document.getElementById('viewer-wallet').textContent = viewerWallet
+      document.getElementById('viewer-wallet').style.display = 'inline'
+
+      // Try to access document immediately
+      accessDocument()
+  }
+
+  async function accessDocument() {
+    try {
+        const response = await fetch('/access', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ shareId, walletAddress: viewerWallet })
+        })
+
+        const result = await response.json()
+
+        if (result.success) {
+
+  document.getElementById('filename').textContent = `File: ${result.fileName}`
+          document.getElementById('document-viewer').style.display = 'block'
+        } else {
+          document.getElementById('error-message').textContent = result.error
+          document.getElementById('error-message').style.display = 'block'
+        }
+      } catch (error) {
+        document.getElementById('error-message').textContent = 'Access failed: ' + error.message
+        document.getElementById('error-message').style.display = 'block'
+      }
+  }
+
+  function downloadFile() {
+      window.open(`/download/${shareId}?wallet=${viewerWallet}`, '_blank')
+    }
+</script>

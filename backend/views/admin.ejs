@@ -1,0 +1,108 @@
+<div id="admin-panel">
+    <h2>Upload Document</h2>
+
+    <div id="wallet-section">
+      <button onclick="connectAdminWallet()">Connect Wallet</button>
+      <span id="admin-wallet"></span>
+    </div>
+
+    <form id="upload-form" style="display:none">
+      <input type="file" id="document" required>
+      <textarea id="wallet-addresses" placeholder="Enter wallet addresses (one per line)" required></textarea>
+      <button type="submit">Upload & Encrypt</button>
+    </form>
+
+    <div id="share-link" style="display:none">
+      <h3>Share Link:</h3>
+      <input type="text" id="link" readonly>
+      <button onclick="copyLink()">Copy</button>
+    </div>
+  </div>
+
+  <script>
+    let wallet = null
+
+    async function connectAdminWallet() {
+      wallet = await connectWallet()
+
+  document.getElementById('admin-wallet').textContent = wallet
+      document.getElementById('admin-wallet').style.display = 'inline'
+      document.getElementById('upload-form').style.display = 'block'
+    }
+
+    function copyLink() {
+    const linkInput = document.getElementById('link')
+    linkInput.select()
+    linkInput.setSelectionRange(0, 99999) // For mobile devices
+
+    try {
+      // Try modern clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(linkInput.value
+  ).then(() => {
+          alert('Link copied!')
+        }).catch(() => {
+          // Fallback to old method
+          document.execCommand('copy')
+          alert('Link copied!')
+        })
+      } else {
+        // Use older method for localhost
+        const successful =
+  document.execCommand('copy')
+        if (successful) {
+          alert('Link copied!')
+        } else {
+          alert('Copy failed. Please copy manually.')
+        }
+      }
+    } catch (err) {
+      alert('Copy not supported. Please copy manually.')
+    }
+  }
+
+    // Wait for page to load, then attach event listener
+    window.addEventListener('DOMContentLoaded', function() {
+      console.log('Setting up upload form listener...')
+
+      document.getElementById('upload-form').onsubmit = async function(e) {
+        console.log('Upload form submitted!')
+        e.preventDefault()
+
+        const formData = new FormData()
+        const fileInput =
+  document.getElementById('document')
+        const walletsText =
+  document.getElementById('wallet-addresses').value
+
+        console.log('File:', fileInput.files[0])
+        console.log('Wallets:', walletsText)
+
+        formData.append('document', fileInput.files[0])
+        formData.append('walletAddresses', walletsText)
+
+        try {
+          console.log('Sending request...')
+          const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+          })
+
+          const result = await response.json()
+          console.log('Response:', result)
+
+          if (result.success) {
+            const shareLink = `${window.location.origin}/view/${result.shareId}`
+            document.getElementById('link').value = shareLink
+
+            document.getElementById('share-link').style.display = 'block'
+          } else {
+            alert('Upload failed: ' + result.error)
+          }
+        } catch (error) {
+          console.error('Upload error:', error)
+          alert('Upload error: ' + error.message)
+        }
+      }
+    })
+  </script>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Doc Share</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>One-Time Doc Share</h1>
+  </header>
+
+  <main>
+    <%- body %>
+  </main>
+
+  <script src="https://unpkg.com/@mysten/dapp-kit@latest/dist/dapp-kit.umd.js"></script>
+  <script src="https://unpkg.com/@mysten/slush-wallet@latest/dist/index.umd.js"></script>
+
+    <script>
+  // Comprehensive wallet detection
+  async function connectWallet() {
+    try {
+      console.log('Trying Wallet Standard API...')
+
+      // Check for Wallet Standard
+      if (window.navigator && window.navigator.wallets) {
+        const wallets = await window.navigator.wallets.getWallets()
+        console.log('Standard wallets found:', wallets)
+
+        if (wallets.length > 0) {
+          const wallet = wallets[0]
+          const accounts = await wallet.connect()
+          return accounts[0].address
+        }
+      }
+
+      // Check for window.wallet (another common pattern)
+      if (window.wallet) {
+        console.log('window.wallet found:', window.wallet)
+        const accounts = await window.wallet.connect()
+        return accounts[0]
+      }
+
+      console.log('No wallet standard found')
+      alert('Please try refreshing the page or check if Slush wallet is properly installed')
+      return null
+
+    } catch (error) {
+      console.error('Wallet connection error:', error)
+      alert('Failed to connect: ' + error.message)
+      return null
+    }
+  }
+
+  // Also check when page loads
+  window.addEventListener('load', () => {
+    console.log('Page loaded, checking for wallets...')
+    setTimeout(() => {
+      const allProps = Object.keys(window)
+      console.log('All window properties:', allProps.slice(0, 50)) // First 50
+    }, 1000)
+  })
+  </script>
+</body>
+</html>
