@@ -1,4 +1,5 @@
 const express = require('express')
+const path = require('path')
 const multer = require('multer')
 const expressLayouts = require('express-ejs-layouts')
 const { encryptAndUpload, downloadAndDecrypt, verifyAccess } = require('./services')
@@ -6,14 +7,14 @@ const { encryptAndUpload, downloadAndDecrypt, verifyAccess } = require('./servic
 const app = express()
 
 app.set('view engine', 'ejs')
-app.set('views', './views')
+app.set('views', path.join(__dirname, '../views'))
 app.use(expressLayouts)
 app.set('layout', 'layout')
-app.use(express.static('public'))
+app.use(express.static(path.join(__dirname, '../public')))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-const upload = multer({ dest: 'uploads/' })
+const upload = multer({ dest: '/tmp/uploads/' })
 
 app.get('/', (req, res) => res.render('admin'))
 app.get('/view/:shareId', (req, res) => res.render('view', { shareId: req.params.shareId }))

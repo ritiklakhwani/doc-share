@@ -4,6 +4,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "build": "echo 'Build complete'",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.js"
   },
