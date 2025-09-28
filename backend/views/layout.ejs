@@ -1,67 +1,186 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Doc Share</title>
+  <title>WalShare - Decentralized Document Sharing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.css">
   <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body>
   <header>
-    <h1>One-Time Doc Share</h1>
+    <div class="header-content">
+      <div class="logo">
+        <div class="logo-icon">
+          <div class="rotating-logo-bg"></div>
+          <img src="/images/download.jpeg" alt="Walrus Logo" class="walrus-logo">
+        </div>
+        <div class="logo-text">
+          <h1>WalShare</h1>
+          <span class="tagline">Decentralized • Secure • One-Time</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="#" class="nav-link" onclick="openHowItWorks()">
+          <i data-feather="help-circle"></i>
+          <span>How It Works</span>
+        </a>
+        <div class="nav-status" id="walrus-status">
+          <i data-feather="globe"></i>
+          <span>Walrus</span>
+          <div class="status-dot" id="status-indicator"></div>
+        </div>
+        <a href="#" class="nav-link" onclick="openFAQ()">
+          <i data-feather="message-circle"></i>
+          <span>FAQ</span>
+        </a>
+        <a href="https://github.com/ritiklakhwani/doc-share" target="_blank" class="nav-link">
+          <i data-feather="github"></i>
+          <span>GitHub</span>
+        </a>
+      </nav>
+
+      <div class="active-links-counter">
+        <i data-feather="link"></i>
+        <span>Active Links: <span id="active-count">0</span></span>
+      </div>
+    </div>
   </header>
 
   <main>
     <%- body %>
   </main>
 
+  <!-- Modals -->
+  <div id="how-it-works-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i data-feather="help-circle"></i> How WalShare Works</h3>
+        <span class="close" onclick="closeModal('how-it-works-modal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>Upload Your Document</h4>
+            <p>Select any file and enter the email addresses of people you want to share with. Your document is encrypted by Tusky and uploaded to the decentralized Walrus network.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>Generate Encrypted Links</h4>
+            <p>Each email gets a unique, encrypted magic link with a JWT token. These links are valid for only 2 minutes and can be used only once.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Secure One-Time Access</h4>
+            <p>Recipients click their unique link to securely download the file. After all users access it OR 2 minutes pass, the document is permanently deleted from Walrus.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="faq-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i data-feather="message-circle"></i> Frequently Asked Questions</h3>
+        <span class="close" onclick="closeModal('faq-modal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="faq-item">
+          <h4>What is Walrus?</h4>
+          <p>Walrus is a decentralized storage network that ensures your documents are stored securely without centralized servers.</p>
+        </div>
+        <div class="faq-item">
+          <h4>How long do links stay active?</h4>
+          <p>All magic links expire after exactly 2 minutes OR when all authorized users have accessed the document, whichever comes first.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Can I access a link multiple times?</h4>
+          <p>No, each magic link can only be used once. After clicking and downloading, the link becomes invalid.</p>
+        </div>
+        <div class="faq-item">
+          <h4>What happens to my documents?</h4>
+          <p>Documents are permanently deleted from Walrus storage after the expiry conditions are met. There's no way to recover them.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Is my data encrypted?</h4>
+          <p>Yes, all documents are encrypted before upload and can only be decrypted with valid JWT tokens from authorized magic links.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    async function connectWallet() {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+    let activeLinksCount = 0;
 
-        const walletChecks = [
-          () => window.sui?.connect(),
-          () => window.suiWallet?.requestPermissions(),
-          () => window.slush?.connect(),
-        ]
+    // Modal functions
+    function openHowItWorks() {
+      document.getElementById('how-it-works-modal').style.display = 'block';
+      feather.replace();
+    }
 
-        for (const check of walletChecks) {
-          try {
-            const result = await check()
-            if (result && result.accounts && result.accounts.length > 0) {
-              return result.accounts[0]
-            }
-          } catch (e) {
-            // try next method
-          }
-        }
+    function openFAQ() {
+      document.getElementById('faq-modal').style.display = 'block';
+      feather.replace();
+    }
 
-        const manualAddress = prompt('Paste your Sui wallet address or cancel for test address:')
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
 
-        if (manualAddress && manualAddress.trim()) {
-          const address = manualAddress.trim()
-          if (address.startsWith('0x') && address.length === 66) {
-            return address
-          }
-        }
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+      }
+    }
 
-        // generate test address
-        return '0x' + Array(64).fill(0).map(() =>
-          Math.floor(Math.random() * 16).toString(16)
-        ).join('')
+    // Active links counter functions
+    function updateActiveLinksCount(count) {
+      activeLinksCount = count;
+      document.getElementById('active-count').textContent = count;
+    }
 
-      } catch (error) {
-        return '0x' + Array(64).fill(0).map(() =>
-          Math.floor(Math.random() * 16).toString(16)
-        ).join('')
+    function incrementActiveLinks(amount) {
+      activeLinksCount += amount;
+      document.getElementById('active-count').textContent = activeLinksCount;
+    }
+
+    function decrementActiveLinks(amount) {
+      activeLinksCount = Math.max(0, activeLinksCount - amount);
+      document.getElementById('active-count').textContent = activeLinksCount;
+    }
+
+    // Walrus connectivity check
+    function checkWalrusConnectivity() {
+      const statusIndicator = document.getElementById('status-indicator');
+
+      // Simulate connectivity check - replace with actual check
+      const isOnline = true; // This would be a real API call to Walrus
+
+      if (isOnline) {
+        statusIndicator.className = 'status-dot online';
+      } else {
+        statusIndicator.className = 'status-dot offline';
       }
     }
 
     // Initialize feather icons when page loads
     document.addEventListener('DOMContentLoaded', function() {
-      feather.replace()
-    })
+      feather.replace();
+      checkWalrusConnectivity();
+
+      // Check connectivity every 30 seconds
+      setInterval(checkWalrusConnectivity, 30000);
+    });
   </script>
 </body>
 </html>

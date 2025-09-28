@@ -1,130 +1,109 @@
 
 
 <div id="viewer">
-  <h2><i data-feather="lock"></i> Access Document</h2>
-  <div style="text-align: center; margin-bottom: 2rem; opacity: 0.7;">
-    <code style="background: rgba(18, 20, 26, 0.5); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem;">
-      <i data-feather="hash" style="width: 14px; height: 14px; margin-right: 4px;"></i>
-      <%= shareId.slice(0, 12) %>...
-    </code>
-  </div>
+  <h2><i data-feather="file-text"></i> Document Access</h2>
 
-  <div id="wallet-section">
-    <button id="connect-viewer-btn" onclick="connectViewerWallet()">
-      <i data-feather="link"></i>
-      <span>Connect Wallet to Access</span>
-    </button>
-    <span id="viewer-wallet" style="display:none"></span>
-  </div>
+  <div id="access-info" class="access-card">
+    <div id="loading-verification" class="loading-state">
+      <i data-feather="loader" class="spin"></i>
+      <span>Verifying access link...</span>
+    </div>
 
-  <div id="loading-wallet" style="display:none" class="loading-state">
-    <i data-feather="loader" class="spin"></i>
-    <span>Connecting wallet...</span>
-  </div>
+    <div id="access-granted" style="display:none" class="success-state">
+      <i data-feather="check-circle"></i>
+      <h3>Access Granted</h3>
+      <p id="file-info"></p>
+      <p id="email-info"></p>
+      <button id="view-file-btn" onclick="viewFile()">
+        <i data-feather="eye"></i>
+        <span>View File</span>
+      </button>
+    </div>
 
-  <div id="loading-access" style="display:none" class="loading-state">
-    <i data-feather="loader" class="spin"></i>
-    <span>Verifying access...</span>
-  </div>
+    <div id="access-denied" style="display:none" class="error-state">
+      <i data-feather="x-circle"></i>
+      <h3>Access Denied</h3>
+      <p id="error-message"></p>
+    </div>
 
-  <div id="document-viewer" style="display:none">
-    <h3><i data-feather="check-circle"></i> Document Access Granted!</h3>
-    <p id="filename" style="margin: 1rem 0; font-weight: 500;"></p>
-    <button id="download-btn" onclick="downloadFile()">
+    <div id="file-downloaded" style="display:none" class="success-state">
       <i data-feather="download"></i>
-      <span>Download File</span>
-    </button>
-  </div>
-
-  <div id="error-message" style="display:none;" class="error">
-    <!-- Error messages -->
+      <h3>File Downloaded</h3>
+      <p>The file has been downloaded to your device. This link has now expired and cannot be used again.</p>
+    </div>
   </div>
 </div>
 
 <script>
-  const shareId = '<%= shareId %>'
-  let viewerWallet = null
+  const token = '<%= token %>'
+  let fileInfo = null
 
-  async function connectViewerWallet() {
-    const connectBtn = document.getElementById('connect-viewer-btn')
-    const loadingWallet = document.getElementById('loading-wallet')
-
-    // Show loading state
-    connectBtn.style.display = 'none'
-    loadingWallet.style.display = 'block'
-
+  async function verifyAccess() {
     try {
-      viewerWallet = await connectWallet()
-
-      // Hide wallet loading
-      loadingWallet.style.display = 'none'
-
-      // Show wallet info
-      document.getElementById('viewer-wallet').textContent = viewerWallet
-      document.getElementById('viewer-wallet').style.display = 'inline'
-
-      // Update button to show connected state
-      connectBtn.innerHTML = '<i data-feather="check"></i><span>Wallet Connected</span>'
-      connectBtn.style.display = 'inline-block'
-      connectBtn.disabled = true
-      connectBtn.style.opacity = '0.7'
-
-      feather.replace()
-
-      // Start access verification
-      accessDocument()
-    } catch (error) {
-      loadingWallet.style.display = 'none'
-      connectBtn.style.display = 'inline-block'
-
-      document.getElementById('error-message').textContent = 'Failed to connect wallet: ' + error.message
-      document.getElementById('error-message').style.display = 'block'
-    }
-  }
-
-  async function accessDocument() {
-    const loadingAccess = document.getElementById('loading-access')
-    const errorMessage = document.getElementById('error-message')
-
-    // Show access verification loading
-    loadingAccess.style.display = 'block'
-    errorMessage.style.display = 'none'
-
-    try {
-      const response = await fetch('/access', {
+      const response = await fetch('/verify-access', {
         method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ shareId, walletAddress: viewerWallet })
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ token })
       })
 
       const result = await response.json()
 
-      // Hide loading state
-      loadingAccess.style.display = 'none'
+      document.getElementById('loading-verification').style.display = 'none'
 
-      if (result.success) {
-        document.getElementById('filename').textContent = `File: ${result.fileName}`
-        document.getElementById('document-viewer').style.display = 'block'
+      if (result.valid) {
+        fileInfo = result
+        document.getElementById('file-info').textContent = `File: ${result.fileName}`
+        document.getElementById('email-info').textContent = `Authorized for: ${result.email}`
+        document.getElementById('access-granted').style.display = 'block'
         feather.replace()
       } else {
-        errorMessage.innerHTML = '<i data-feather="alert-circle"></i> ' + result.error
-        errorMessage.style.display = 'block'
+        document.getElementById('error-message').textContent = result.error
+        document.getElementById('access-denied').style.display = 'block'
         feather.replace()
       }
     } catch (error) {
-      loadingAccess.style.display = 'none'
-      errorMessage.innerHTML = '<i data-feather="alert-circle"></i> Access failed: ' + error.message
-      errorMessage.style.display = 'block'
+      document.getElementById('loading-verification').style.display = 'none'
+      document.getElementById('error-message').textContent = 'Failed to verify access: ' + error.message
+      document.getElementById('access-denied').style.display = 'block'
       feather.replace()
     }
   }
 
-  function downloadFile() {
-    window.open(`/download/${shareId}?wallet=${viewerWallet}`, '_blank')
+  async function viewFile() {
+    try {
+      const viewBtn = document.getElementById('view-file-btn')
+      const originalContent = viewBtn.innerHTML
+      viewBtn.innerHTML = '<i data-feather="loader" class="spin"></i><span>Downloading...</span>'
+      viewBtn.disabled = true
+      feather.replace()
+
+      // Trigger download
+      const downloadLink = document.createElement('a')
+      downloadLink.href = `/download/${token}`
+      downloadLink.download = fileInfo.fileName
+      document.body.appendChild(downloadLink)
+      downloadLink.click()
+      document.body.removeChild(downloadLink)
+
+      // Show download complete state
+      document.getElementById('access-granted').style.display = 'none'
+      document.getElementById('file-downloaded').style.display = 'block'
+      feather.replace()
+
+    } catch (error) {
+      const viewBtn = document.getElementById('view-file-btn')
+      viewBtn.innerHTML = '<i data-feather="eye"></i><span>View File</span>'
+      viewBtn.disabled = false
+      feather.replace()
+      alert('Download failed: ' + error.message)
+    }
   }
 
-  // Initialize icons when page loads
-  document.addEventListener('DOMContentLoaded', function() {
+  // Verify access on page load
+  window.addEventListener('DOMContentLoaded', function() {
+    verifyAccess()
     feather.replace()
   })
 </script>

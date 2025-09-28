@@ -1,112 +1,204 @@
 <div id="admin-panel">
     <h2><i data-feather="file-text"></i> Upload Document</h2>
 
-    <div id="wallet-section">
-      <button id="connect-btn" onclick="connectAdminWallet()">
-        <i data-feather="link"></i>
-        <span>Connect Wallet</span>
-      </button>
-      <span id="admin-wallet"></span>
-    </div>
+    <form id="upload-form">
+      <div class="form-group">
+        <label for="document">Select Document:</label>
+        <div class="file-input-wrapper">
+          <div class="file-input-custom" id="file-input-area">
+            <i data-feather="upload-cloud" class="file-input-icon"></i>
+            <div class="file-input-text">
+              <div class="file-input-primary">Choose file to upload</div>
+              <div class="file-input-secondary">Drag & drop or click to browse</div>
+            </div>
+            <input type="file" id="document" required accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
+          </div>
+        </div>
+      </div>
 
-    <div id="loading-wallet" style="display:none" class="loading-state">
-      <i data-feather="loader" class="spin"></i>
-      <span>Connecting wallet...</span>
-    </div>
+      <div class="form-group">
+        <label for="email-addresses">
+          <i data-feather="mail"></i>
+          Email Addresses (one per line):
+        </label>
+        <div class="textarea-wrapper">
+          <textarea id="email-addresses" placeholder="Enter email addresses (one per line)&#10;user1@example.com&#10;user2@example.com&#10;user3@example.com" required rows="5"></textarea>
+          <div class="textarea-footer">
+            <div class="email-count">
+              <i data-feather="users"></i>
+              <span id="email-count-text">0 recipients</span>
+            </div>
+            <div class="textarea-helper">
+              <i data-feather="info"></i>
+              <span>One email per line</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <form id="upload-form" style="display:none">
-      <input type="file" id="document" required accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
-      <textarea id="wallet-addresses" placeholder="Enter wallet addresses (one per line)&#10;0x1234...&#10;0x5678..." required></textarea>
       <button type="submit" id="upload-btn">
         <i data-feather="upload"></i>
-        <span>Upload to Walrus</span>
+        <span>Generate Links</span>
       </button>
     </form>
 
     <div id="loading-upload" style="display:none" class="loading-state">
       <i data-feather="loader" class="spin"></i>
-      <span>Uploading to Walrus...</span>
+      <span>Uploading to Walrus and generating encrypted links...</span>
     </div>
 
-    <div id="share-link" style="display:none">
-      <h3><i data-feather="check-circle"></i> Share Link Ready</h3>
-      <input type="text" id="link" readonly>
-      <button onclick="copyLink()">
-        <i data-feather="copy"></i>
-        <span>Copy Link</span>
-      </button>
+    <div id="magic-links-section" style="display:none">
+      <h3><i data-feather="check-circle"></i> Encrypted Magic Links Generated</h3>
+      <p class="links-info">Each encrypted link below is unique and can only be used once. Links expire after 2 minutes or when all users have accessed the document.</p>
+      <div id="magic-links-container"></div>
     </div>
   </div>
 
   <script>
-    let wallet = null
-
-    async function connectAdminWallet() {
-      const connectBtn = document.getElementById('connect-btn')
-      const loadingWallet = document.getElementById('loading-wallet')
-      const walletSection = document.getElementById('wallet-section')
-
-      // Show loading state
-      connectBtn.style.display = 'none'
-      loadingWallet.style.display = 'block'
-
-      try {
-        wallet = await connectWallet()
-
-        // Hide loading and show wallet info
-        loadingWallet.style.display = 'none'
-        document.getElementById('admin-wallet').textContent = wallet
-        document.getElementById('admin-wallet').style.display = 'inline'
-        document.getElementById('upload-form').style.display = 'block'
-
-        // Update button to show connected state
-        connectBtn.innerHTML = '<i data-feather="check"></i><span>Wallet Connected</span>'
-        connectBtn.style.display = 'inline-block'
-        connectBtn.disabled = true
-        connectBtn.style.opacity = '0.7'
-
-        feather.replace()
-      } catch (error) {
-        // Hide loading and show error
-        loadingWallet.style.display = 'none'
-        connectBtn.style.display = 'inline-block'
-        alert('Failed to connect wallet: ' + error.message)
-      }
-    }
-
-    function copyLink() {
-      const linkInput = document.getElementById('link')
-      linkInput.select()
-      linkInput.setSelectionRange(0, 99999)
-
+    function copyMagicLink(link, button) {
       try {
         if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(linkInput.value).then(() => {
-            alert('Link copied!')
+          navigator.clipboard.writeText(link).then(() => {
+            const originalText = button.innerHTML
+            button.innerHTML = '<i data-feather="check"></i><span>Copied!</span>'
+            button.style.background = '#10b981'
+            feather.replace()
+
+            setTimeout(() => {
+              button.innerHTML = originalText
+              button.style.background = ''
+              feather.replace()
+            }, 2000)
           }).catch(() => {
-            document.execCommand('copy')
-            alert('Link copied!')
+            fallbackCopy(link, button)
           })
         } else {
-          const successful = document.execCommand('copy')
-          if (successful) {
-            alert('Link copied!')
-          } else {
-            alert('Copy failed. Please copy manually.')
-          }
+          fallbackCopy(link, button)
         }
       } catch (err) {
         alert('Copy not supported. Please copy manually.')
       }
     }
 
+    function fallbackCopy(link, button) {
+      const textArea = document.createElement('textarea')
+      textArea.value = link
+      document.body.appendChild(textArea)
+      textArea.select()
+      const successful = document.execCommand('copy')
+      document.body.removeChild(textArea)
+
+      if (successful) {
+        const originalText = button.innerHTML
+        button.innerHTML = '<i data-feather="check"></i><span>Copied!</span>'
+        button.style.background = '#10b981'
+        feather.replace()
+
+        setTimeout(() => {
+          button.innerHTML = originalText
+          button.style.background = ''
+          feather.replace()
+        }, 2000)
+      } else {
+        alert('Copy failed. Please copy manually.')
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', function() {
+      // Custom file input functionality
+      const fileInput = document.getElementById('document');
+      const fileInputArea = document.getElementById('file-input-area');
+      const fileInputPrimary = fileInputArea.querySelector('.file-input-primary');
+      const fileInputSecondary = fileInputArea.querySelector('.file-input-secondary');
+      const fileInputIcon = fileInputArea.querySelector('.file-input-icon');
+
+      // Handle file selection
+      fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          fileInputArea.classList.add('file-input-selected');
+          fileInputPrimary.textContent = file.name;
+          fileInputSecondary.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB • ${file.type || 'Unknown type'}`;
+          fileInputIcon.setAttribute('data-feather', 'check-circle');
+          feather.replace();
+        } else {
+          resetFileInput();
+        }
+      });
+
+      // Handle drag and drop
+      fileInputArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        fileInputArea.style.borderColor = '#22d3ee';
+        fileInputArea.style.background = 'linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%)';
+      });
+
+      fileInputArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        if (!fileInputArea.classList.contains('file-input-selected')) {
+          fileInputArea.style.borderColor = '';
+          fileInputArea.style.background = '';
+        }
+      });
+
+      fileInputArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        fileInputArea.style.borderColor = '';
+        fileInputArea.style.background = '';
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          fileInput.files = files;
+          fileInput.dispatchEvent(new Event('change'));
+        }
+      });
+
+      function resetFileInput() {
+        fileInputArea.classList.remove('file-input-selected');
+        fileInputPrimary.textContent = 'Choose file to upload';
+        fileInputSecondary.textContent = 'Drag & drop or click to browse';
+        fileInputIcon.setAttribute('data-feather', 'upload-cloud');
+        feather.replace();
+      }
+
+      // Email count functionality
+      const emailTextarea = document.getElementById('email-addresses');
+      const emailCountText = document.getElementById('email-count-text');
+
+      function updateEmailCount() {
+        const emails = emailTextarea.value
+          .split('\n')
+          .map(email => email.trim())
+          .filter(email => email && email.includes('@'));
+
+        const count = emails.length;
+        emailCountText.textContent = count === 1 ? '1 recipient' : `${count} recipients`;
+
+        // Add visual feedback for valid emails
+        const validEmails = emails.filter(email => {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          return emailRegex.test(email);
+        });
+
+        if (validEmails.length !== count && count > 0) {
+          emailCountText.style.color = '#f87171';
+        } else {
+          emailCountText.style.color = '#a855f7';
+        }
+      }
+
+      emailTextarea.addEventListener('input', updateEmailCount);
+      emailTextarea.addEventListener('paste', () => {
+        setTimeout(updateEmailCount, 10);
+      });
+
       document.getElementById('upload-form').onsubmit = async function(e) {
         e.preventDefault()
 
         const uploadBtn = document.getElementById('upload-btn')
         const loadingUpload = document.getElementById('loading-upload')
         const uploadForm = document.getElementById('upload-form')
+        const magicLinksSection = document.getElementById('magic-links-section')
 
         // Show loading state
         uploadBtn.style.display = 'none'
@@ -115,10 +207,10 @@
         try {
           const formData = new FormData()
           const fileInput = document.getElementById('document')
-          const walletsText = document.getElementById('wallet-addresses').value
+          const emailsText = document.getElementById('email-addresses').value
 
           formData.append('document', fileInput.files[0])
-          formData.append('walletAddresses', walletsText)
+          formData.append('emailAddresses', emailsText)
 
           const response = await fetch('/upload', {
             method: 'POST',
@@ -131,12 +223,20 @@
           loadingUpload.style.display = 'none'
 
           if (result.success) {
-            const shareLink = `${window.location.origin}/view/${result.shareId}`
-            document.getElementById('link').value = shareLink
-            document.getElementById('share-link').style.display = 'block'
+            // Display magic links
+            displayMagicLinks(result.magicLinks)
+            magicLinksSection.style.display = 'block'
+
+            // Update active links counter
+            updateActiveLinksCount(result.magicLinks.length)
 
             // Hide upload form after success
             uploadForm.style.display = 'none'
+
+            // Set timer to reset counter after 2 minutes
+            setTimeout(() => {
+              updateActiveLinksCount(0)
+            }, 120000) // 2 minutes
 
             feather.replace()
           } else {
@@ -148,6 +248,32 @@
           uploadBtn.style.display = 'inline-block'
           alert('Upload error: ' + error.message)
         }
+      }
+
+      function displayMagicLinks(magicLinks) {
+        const container = document.getElementById('magic-links-container')
+        container.innerHTML = ''
+
+        magicLinks.forEach((linkData, index) => {
+          const linkDiv = document.createElement('div')
+          linkDiv.className = 'magic-link-item'
+          linkDiv.innerHTML = `
+            <div class="email-label">
+              <i data-feather="mail"></i>
+              <span>${linkData.email}</span>
+            </div>
+            <div class="link-row">
+              <input type="text" class="magic-link-input" value="${linkData.link}" readonly>
+              <button class="copy-btn" onclick="copyMagicLink('${linkData.link}', this)">
+                <i data-feather="copy"></i>
+                <span>Copy</span>
+              </button>
+            </div>
+          `
+          container.appendChild(linkDiv)
+        })
+
+        feather.replace()
       }
 
       // Initialize icons

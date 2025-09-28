@@ -1,4 +1,4 @@
-# Doc Share - One-Time Document Sharing
+# WalShare - One-Time Document Sharing
 
 A secure document sharing application built with Express.js, EJS, and Walrus decentralized storage.
 
